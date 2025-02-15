@@ -1,0 +1,28 @@
+# Object files
+*.o
+*.obj
+
+# Executables
+*.exe
+*.out
+
+# Libraries
+*.lib
+*.a
+*.so
+*.dll
+
+# Debug files
+*.pdb
+
+# Temporary files and directories
+*.swp
+*~
+.#*
+*.log
+/build/
+/Debug/
+/Release/
+
+# IDE specific files
+.vscode/

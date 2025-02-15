@@ -1,0 +1,3 @@
+[submodule "05/util"]
+	path = 05/util
+	url = git@github.com:Galus/util.c.git

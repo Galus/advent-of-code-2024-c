@@ -1,3 +1,4 @@
+#include "util/dbg.h"
 #include "util/io.h"
 #include "util/mem.h"
 #include "util/str.h"
@@ -13,21 +14,41 @@
 #define TO_ZERO_BASED(index) ((index) - 1)
 #define TO_ONE_BASED(index) ((index) + 1)
 
-struct Rule {
+typedef struct {
   int left;
   int right;
-};
+} Rule;
 
-struct Update {
+typedef struct {
   int *pages;
+  int pages_length;
   bool isCompliant;
-};
+} Update;
+
+void printRule(Rule *rule) {
+  printf("%d|%d", rule->left, rule->right);
+}
+
+void printUpdate(Update *update) {
+  printf("*pages: %p\n", (void*)update->pages);
+  printf("pages_length: %d\n", update->pages_length);
+  printf("isCompliant: %s\n", update->isCompliant ? "true" : "false");
+  printf("pages: \n");
+  print_intarray(update->pages, update->pages_length, 0, update->pages_length);
+}
+
+void printUpdatePages(Update *update) {
+  print_intarray(update->pages, update->pages_length, 0, update->pages_length);
+}
 
 int main() {
   char *file_name = "input.txt";
   size_t max_file_size = MAX_COLS * MAX_ROWS;
   char **lines = NULL;
   int lines_rows = 0;
+  int rules_num = 0;
+  int updates_num = 0;
+  int update_pages_length = 0;
 
   lines =
       file_to_arr(file_name, max_file_size, MAX_ROWS, MAX_COLS, &lines_rows);
@@ -38,31 +59,33 @@ int main() {
 
   // allocate memory for the two new 2d-arrays
   Arena *mem = arena_init(CAPACITY);
-  int rules_num = emptyline_idx;
-  struct Rule rules[rules_num];
-  char **page_rules =
-      (char **)arena_alloc(mem, sizeof(char *) * rules_num + 10);
-  CHECK_NULL(page_rules);
+  // 1. Allocate rules array
+  rules_num = emptyline_idx;
+  Rule **rules = (Rule **)arena_alloc(mem, sizeof(Rule *) * rules_num + 10);
+  CHECK_NULL(rules);
 
-  // PAGE RULES
-  // (rules_num is human 1-based, emptyline_idx is array 0-based)
   for (int i = 0; i < rules_num; i++) {
-    page_rules[i] = arena_alloc(mem, sizeof(char) * strlen(lines[i]) + 10);
-    CHECK_NULL(page_rules[i]);
-    strcpy(page_rules[i], lines[i]);
+    rules[i] = (Rule *)arena_alloc(mem, sizeof(Rule));
+    if (sscanf(lines[i], "%d|%d", &rules[i]->left, &rules[i]->right) != 2) {
+      printf("Failed to scan in left and right number of rule %d", i);
+    }
   }
 
-  int updates_num = lines_rows - emptyline_idx - 1;
-  char **page_updates = arena_alloc(mem, sizeof(char *) * updates_num);
-  CHECK_NULL(page_updates);
+  // 2. Allocate update array
+  updates_num = lines_rows - emptyline_idx - 1;
+  Update **updates =
+      (Update **)arena_alloc(mem, sizeof(Update *) * updates_num);
+  CHECK_NULL(updates);
 
-  // PAGE UPDATES
-  int j = emptyline_idx + 1;
   for (int i = 0; i < updates_num; i++) {
-    page_updates[i] = arena_alloc(mem, sizeof(char) * strlen(lines[j]) + 10);
-    CHECK_NULL(page_updates[i]);
-    strcpy(page_updates[i], lines[j]);
-    j++;
+    updates[i] = (Update *)arena_alloc(mem, sizeof(Update));
+    CHECK_NULL(updates[i]);
+    char *update_str = lines[i+emptyline_idx+1];
+    int update_pages_length = 0;
+    updates[i]->pages = get_array_from_csv_int(update_str, &update_pages_length);
+    updates[i]->pages_length = update_pages_length;
+    printf("Update %d pages: ",i);
+    print_intarray(updates[i]->pages, update_pages_length, 0, 999);
   }
 
   // free lines
@@ -73,52 +96,41 @@ int main() {
   int total_sum = 0;
   // For each page update
   for (int i = 0; i < updates_num; i++) {
-    bool valid = true;
-    char *update = page_updates[i];
-    int update_pages_length = 0;
-    int *update_arr = get_array_from_csv_int(update, &update_pages_length);
-
     // for each page in the page update
-    for (int j = 0; j < update_pages_length; j++) {
-      int page = update_arr[j];
+    updates[i]->isCompliant = true;
+    int pages_length = updates[i]->pages_length;
+    for (int j = 0; j < pages_length; j++) {
+      int page = updates[i]->pages[j];
 
       // for each rule
-      for (int k = 0; k < rules_num; k++) { // reminder: i:update, j:page,
-                                            // k:rule
-        int left;
-        int right;
-        if (sscanf(page_rules[k], "%d|%d", &left, &right) == 2) {
-        }
+      for (int k = 0; k < rules_num; k++) {
+        int left = rules[k]->left;
+        int right = rules[k]->right;
         if (page == right) {
-          for (int z = j; z < update_pages_length && valid == true; z++) {
-            if (left == update_arr[z]) {
-              printf(
-                  "update %d UNSAFE:\n\tPage: %d\n\tUpdate: %s\n\tRule: %s\n",
-                  i, page, update, page_rules[k]);
-              valid = false;
+          for (int z = j; z < pages_length && updates[i]->isCompliant == true; z++) {
+            if (left == updates[i]->pages[z]) {
+              updates[i]->isCompliant = false;
+              printUpdate(updates[i]);
               break;
             }
           }
         }
         if (page == left) {
           // test the rule's right page on the pages to the left
-          for (int z = j; z >= 0 && valid == true; z--) {
-            if (right == update_arr[z]) {
-              // break
-              printf(
-                  "update %d UNSAFE:\n\tPage: %d\n\tUpdate: %s\n\tRule: %s\n",
-                  i, page, update, page_rules[k]);
-              valid = false;
+          for (int z = j; z >= 0 && updates[i]->isCompliant == true; z--) {
+            if (right == updates[i]->pages[z]) {
+              updates[i]->isCompliant = false;
+              printUpdate(updates[i]);
               break;
             }
           }
         }
       }
     }
-    if (valid) {
+    if (updates[i]->isCompliant == true) {
       // get middle page and add to total sum
-      int middle_page = update_arr[update_pages_length / 2];
-      printf("update %d SAFE:\n\tUpdate: %s\n", i, update);
+      int middle_page = updates[i]->pages[(updates[i]->pages_length)/2];
+      printUpdate(updates[i]);
       printf("\tMiddle page: %d\n", middle_page);
       total_sum += middle_page;
 
@@ -126,9 +138,10 @@ int main() {
     }
   }
 
+  printf("Total sum of middle pages of safe update: %d\n", total_sum);
+
   // Free allocated memory
   arena_free(mem);
 
-  printf("Total sum of middle pages of safe update: %d\n", total_sum);
   return EXIT_SUCCESS;
 }

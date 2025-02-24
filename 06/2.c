@@ -1,7 +1,4 @@
-#include "util/array.h"
-#include "util/dbg.h"
 #include "util/io.h"
-#include "util/str.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -61,30 +58,9 @@ void freePointArray(PointArray *arr) {
 
 bool isGuard(char c) { return (c == '^' || c == '>' || c == 'v' || c == '<'); }
 
-// Checks the direction in the lines array and updates guard struct
-/*Direction setGuardDirection(char **lines, Guard *g) {*/
-/*  switch (lines[g->y][g->x]) {*/
-/*  case '^':*/
-/*    return UP;*/
-/*    break;*/
-/*  case '>':*/
-/*    return RIGHT;*/
-/*    break;*/
-/*  case 'v':*/
-/*    return DOWN;*/
-/*    break;*/
-/*  case '<':*/
-/*    return LEFT;*/
-/*    break;*/
-/*  default:*/
-/*    printf("Guard is in the upside-down.\n");*/
-/*    return ERROR;*/
-/*    break;*/
-/*  }*/
-/*}*/
-
 int canMove(char **lines, Guard g) {
-  /*printf("Checking if guard at y,x : %d,%d can move dir %s\n", g.y, g.x, dirName[g.direction]);*/
+  /*printf("Checking if guard at y,x : %d,%d can move dir %s\n", g.y, g.x,
+   * dirName[g.direction]);*/
   char future = 'F';
   switch (g.direction) {
   case UP:
@@ -173,29 +149,13 @@ void move(char **lines, Guard *g) {
 
 void turnRight(Guard *g) {
   g->direction = (g->direction + 1) % 4;
-  //  switch (g->direction) {
-  //  case UP:
-  //    g->direction = RIGHT;
-  //    break;
-  //  case RIGHT:
-  //    g->direction = DOWN;
-  //    break;
-  //  case DOWN:
-  //    g->direction = LEFT;
-  //    break;
-  //  case LEFT:
-  //    g->direction = RIGHT;
-  //    break;
-  //  default:
-  //    printf("Invalid direction\n");
-  //    break;
-  //  }
 }
 
 bool checkBounds(char **lines, int lines_num, Guard g) {
   int total_lines = lines_num;
   int line_length = strlen(lines[0]);
-  /*printf("Guard is at y,x %d,%d within total_lines: %d line_length: %d\n", g.y, g.x, total_lines, line_length);*/
+  /*printf("Guard is at y,x %d,%d within total_lines: %d line_length: %d\n",
+   * g.y, g.x, total_lines, line_length);*/
   if (g.x < line_length - 1 && g.y < total_lines - 1) {
     if (g.x > 0 && g.y > 0) {
       return true;
@@ -224,8 +184,8 @@ int simulate(char **lines, bool drawX) {
     }
   }
 
-  PointArray visited = createPointArray(MAX_OBSTACLES*99);
-  int visited_dir[MAX_OBSTACLES*99];
+  PointArray visited = createPointArray(MAX_OBSTACLES * 99);
+  int visited_dir[MAX_OBSTACLES * 99];
   int visited_idx = 0;
   while (checkBounds(lines, strlen(lines[0]), g)) {
 
@@ -234,8 +194,8 @@ int simulate(char **lines, bool drawX) {
     visited_dir[visited_idx++] = g.direction;
 
     /*print_linesarray(lines, strlen(lines[0]));*/
-    /*printf("Guard is going %s at (y,x): %d,%d\n", dirName[g.direction], g.y, g.x);*/
-
+    /*printf("Guard is going %s at (y,x): %d,%d\n", dirName[g.direction], g.y,
+     * g.x);*/
 
     int result = canMove(lines, g);
     if (result == UNIQUE || result == BEEN_HERE) {
@@ -249,8 +209,9 @@ int simulate(char **lines, bool drawX) {
 
       // check if guard has already been here
       turnRight(&g);
-      for ( int i = 0; i < visited_idx; i++) {
-        if (visited.data[i].x == g.x && visited.data[i].y == g.y && visited_dir[i] == g.direction) {
+      for (int i = 0; i < visited_idx; i++) {
+        if (visited.data[i].x == g.x && visited.data[i].y == g.y &&
+            visited_dir[i] == g.direction) {
           freePointArray(&obstacles);
           freePointArray(&visited);
           return 1;
@@ -271,7 +232,7 @@ int simulate(char **lines, bool drawX) {
 }
 
 int main(int argc, char *argv[]) {
-  clock_t start,end;
+  clock_t start, end;
   double cpu_time_used;
   start = clock();
   char *file_name = "input.txt";
@@ -301,15 +262,21 @@ int main(int argc, char *argv[]) {
 
   int part2 = 0;
   for (int i = 0; i < traversedPath.length; i++) {
+    // instead of making a copy of lines, just reread the input.
     char **linez =
         file_to_arr(file_name, max_file_size, max_rows, max_cols, &lines_rows);
+    // inject a new obstacle
     linez[(traversedPath.data[i]).y][(traversedPath.data[i]).x] = '#';
     /*printf("Lets go %d\n",i);*/
-    part2 += simulate(linez, false);
+    if (simulate(linez, false) == 1) {
+      printf("Adding a wall at (%d,%d) will cause infinite loop\n",
+             traversedPath.data[i].x, traversedPath.data[i].y);
+      part2++;
+    }
   }
 
   end = clock();
-  cpu_time_used = ((double)(end-start));
+  cpu_time_used = ((double)(end - start));
   printf("Time taken: %f seconds\n", cpu_time_used);
 
   /*printf("Guard exits at %d,%d\n", g.y, g.x);*/

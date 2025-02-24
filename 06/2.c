@@ -5,13 +5,14 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #define guard '^'
 #define obstacle '#'
 #define MAX_OBSTACLES 6000
 
-typedef enum { UP, RIGHT, DOWN, LEFT, ERROR } Direction;
-const char *dirName[] = {"UP", "RIGHT", "DOWN", "LEFT", "ERROR"};
+typedef enum { UP, RIGHT, DOWN, LEFT } Direction;
+const char *dirName[] = {"UP", "RIGHT", "DOWN", "LEFT"};
 
 typedef enum { BLOCKED_BY_WALL, UNIQUE, BEEN_HERE, DUNNO } Ahead;
 const char *aheadName[] = {"BLOCKED_BY_WALL", "UNIQUE", "BEEN_HERE", "DUNNO"};
@@ -25,33 +26,35 @@ typedef struct {
 typedef struct {
   int x;
   int y;
-} Obstacle;
+} Point;
 
 typedef struct {
-  Obstacle *obstacles;
+  Point *data;
   size_t length;
   size_t capacity;
-} ObstacleArray;
+} PointArray;
 
-ObstacleArray createObstacleArray(size_t length) {
-  Obstacle *obstacles = (Obstacle *)malloc(length * sizeof(Obstacle));
-  ObstacleArray arr = {obstacles, 0, length};
+PointArray createPointArray(size_t length) {
+  Point *data = (Point *)malloc(length * sizeof(Point));
+  PointArray arr = {data, 0, length};
   return arr;
 }
 
-void addObstacle(ObstacleArray *arr, int x, int y) {
+void addPoint(PointArray *arr, int x, int y) {
+  /*printf("Adding %zu/%zu\n", arr->length, arr->capacity);*/
   if (arr->length < arr->capacity) {
-    Obstacle o = {x, y};
-    arr->obstacles[arr->length] = o;
+    /*printf("adding point x %d y %d\n", x, y);*/
+    Point o = {x, y};
+    arr->data[arr->length] = o;
     arr->length++;
   } else {
     printf("At capacity\n");
   }
 }
 
-void freeObstacleArray(ObstacleArray *arr) {
-  free(arr->obstacles);
-  arr->obstacles = NULL;
+void freePointArray(PointArray *arr) {
+  free(arr->data);
+  arr->data = NULL;
   arr->length = 0;
   arr->capacity = 0;
 }
@@ -59,32 +62,31 @@ void freeObstacleArray(ObstacleArray *arr) {
 bool isGuard(char c) { return (c == '^' || c == '>' || c == 'v' || c == '<'); }
 
 // Checks the direction in the lines array and updates guard struct
-Direction setGuardDirection(char **lines, Guard *g) {
-  switch (lines[g->y][g->x]) {
-  case '^':
-    return UP;
-    break;
-  case '>':
-    return RIGHT;
-    break;
-  case 'v':
-    return DOWN;
-    break;
-  case '<':
-    return LEFT;
-    break;
-  default:
-    printf("Guard is in the upside-down.\n");
-    return ERROR;
-    break;
-  }
-}
+/*Direction setGuardDirection(char **lines, Guard *g) {*/
+/*  switch (lines[g->y][g->x]) {*/
+/*  case '^':*/
+/*    return UP;*/
+/*    break;*/
+/*  case '>':*/
+/*    return RIGHT;*/
+/*    break;*/
+/*  case 'v':*/
+/*    return DOWN;*/
+/*    break;*/
+/*  case '<':*/
+/*    return LEFT;*/
+/*    break;*/
+/*  default:*/
+/*    printf("Guard is in the upside-down.\n");*/
+/*    return ERROR;*/
+/*    break;*/
+/*  }*/
+/*}*/
 
-int canMove(char **lines, Direction direction, Guard g) {
-  printf("Checking if guard at y,x : %d,%d can move dir %s\n", g.y, g.x,
-         dirName[direction]);
+int canMove(char **lines, Guard g) {
+  /*printf("Checking if guard at y,x : %d,%d can move dir %s\n", g.y, g.x, dirName[g.direction]);*/
   char future = 'F';
-  switch (direction) {
+  switch (g.direction) {
   case UP:
     future = lines[(g.y) - 1][(g.x)];
     break;
@@ -102,9 +104,9 @@ int canMove(char **lines, Direction direction, Guard g) {
     return DUNNO;
     break;
   }
-  printf("infront of guard: [%c]\n", future);
+  /*printf("infront of guard: [%c]\n", future);*/
   if (future != 'F' && future == obstacle) {
-    printf("Hit a wall at %d,%d\n", g.y, g.x);
+    /*printf("Hit a wall at %d,%d\n", g.y, g.x);*/
     return BLOCKED_BY_WALL; // BLOCKED_BY_WALL
   } else if (future != '\0') {
     // alter lines to move to next spot.
@@ -119,10 +121,33 @@ int canMove(char **lines, Direction direction, Guard g) {
   }
 }
 
+void moveDrawX(char **lines, Guard *g) {
+  switch (g->direction) {
+  case UP:
+    lines[(g->y) - 1][(g->x)] = 'X';
+    g->y = (g->y) - 1;
+    break;
+  case RIGHT:
+    lines[(g->y)][(g->x) + 1] = 'X';
+    g->x = (g->x) + 1;
+    break;
+  case DOWN:
+    lines[(g->y) + 1][g->x] = 'X';
+    g->y = (g->y) + 1;
+    break;
+  case LEFT:
+    lines[(g->y)][(g->x) - 1] = 'X';
+    g->x = (g->x) - 1;
+    break;
+  default:
+    printf("Invalid g->direction\n");
+    break;
+    // TODO: Probably cleanup where the guard has already been.
+  }
+}
 
-
-void move(char **lines, Direction direction, Guard *g) {
-  switch (direction) {
+void move(char **lines, Guard *g) {
+  switch (g->direction) {
   case UP:
     lines[(g->y) - 1][(g->x)] = '^';
     g->y = (g->y) - 1;
@@ -140,38 +165,37 @@ void move(char **lines, Direction direction, Guard *g) {
     g->x = (g->x) - 1;
     break;
   default:
-    printf("Invalid direction\n");
+    printf("Invalid g->direction\n");
     break;
     // TODO: Probably cleanup where the guard has already been.
   }
 }
 
-void turnRight(char **lines, Guard *g) {
-  switch (g->direction) {
-  case UP:
-    lines[g->y][g->x] = '>';
-    break;
-  case RIGHT:
-    lines[g->y][g->x] = 'v';
-    break;
-  case DOWN:
-    lines[g->y][g->x] = '<';
-    break;
-  case LEFT:
-    lines[g->y][g->x] = '^';
-    break;
-  default:
-    printf("Invalid direction\n");
-    break;
-  }
-  g->direction = ((g->direction + 1) % 4);
+void turnRight(Guard *g) {
+  g->direction = (g->direction + 1) % 4;
+  //  switch (g->direction) {
+  //  case UP:
+  //    g->direction = RIGHT;
+  //    break;
+  //  case RIGHT:
+  //    g->direction = DOWN;
+  //    break;
+  //  case DOWN:
+  //    g->direction = LEFT;
+  //    break;
+  //  case LEFT:
+  //    g->direction = RIGHT;
+  //    break;
+  //  default:
+  //    printf("Invalid direction\n");
+  //    break;
+  //  }
 }
 
 bool checkBounds(char **lines, int lines_num, Guard g) {
   int total_lines = lines_num;
   int line_length = strlen(lines[0]);
-  printf("Guard is at y,x %d,%d within total_lines: %d line_length: %d\n", g.y,
-         g.x, total_lines, line_length);
+  /*printf("Guard is at y,x %d,%d within total_lines: %d line_length: %d\n", g.y, g.x, total_lines, line_length);*/
   if (g.x < line_length - 1 && g.y < total_lines - 1) {
     if (g.x > 0 && g.y > 0) {
       return true;
@@ -180,152 +204,123 @@ bool checkBounds(char **lines, int lines_num, Guard g) {
   return false;
 }
 
-void simulate(char **lines, Guard *g) {
-
-}
-
-int main(int argc, char *argv[]) {
-  char *file_name = "input.txt";
-  size_t max_file_size = 200 * 200;
-  size_t max_rows = 135;
-  size_t max_cols = 135;
-  int lines_rows = 0;
-  char **lines =
-      file_to_arr(file_name, max_file_size, max_rows, max_cols, &lines_rows);
+int simulate(char **lines, bool drawX) {
 
   Guard g;
-  ObstacleArray arr = createObstacleArray(MAX_OBSTACLES);
+  PointArray obstacles = createPointArray(MAX_OBSTACLES);
 
-  // Find the blasted guard!
-  for (int i = 0; i < lines_rows; i++) {
+  // Find the blasted guard and obstacles;
+  for (int i = 0; i < strlen(lines[0]); i++) {
     for (int j = 0; lines[i][j]; j++) {
       if (isGuard(lines[i][j])) {
         g.y = i;
         g.x = j;
-        setGuardDirection(lines, &g);
+        g.direction = UP;
       }
       if (lines[i][j] == '#') {
-        addObstacle(&arr, j, i);
+        /*printf("adding point (%d,%d)\n", i, j);*/
+        addPoint(&obstacles, (size_t)j, (size_t)i);
       }
     }
   }
 
-  for (int i = 0; i < arr.length; i++) {
-    printf("Obstacle %d: y,x %d,%d\n", i, arr.obstacles[i].y, arr.obstacles[i].x);
-  }
+  PointArray visited = createPointArray(MAX_OBSTACLES*99);
+  int visited_dir[MAX_OBSTACLES*99];
+  int visited_idx = 0;
+  while (checkBounds(lines, strlen(lines[0]), g)) {
 
-  printf("Found guard on line: %d col: %d\n", g.y, g.x);
+    // record that we stepped here and our direction.
+    addPoint(&visited, g.x, g.y);
+    visited_dir[visited_idx++] = g.direction;
 
-  // Predict the guards movement
-  int blocks = 0;
-  int guards_last_x = -1;
-  int guards_last_y = -1;
-  while (checkBounds(lines, lines_rows, g)) {
-    // Check if guard is looping
-    if (guards_last_x == -1) {
-      if (g.x == guards_last_x && g.y == guards_last_y) {
-        printf("Error: Guard unable to move");
-        return 1;
-      }
-    }
-    guards_last_x = g.x;
-    guards_last_y = g.y;
+    /*print_linesarray(lines, strlen(lines[0]));*/
+    /*printf("Guard is going %s at (y,x): %d,%d\n", dirName[g.direction], g.y, g.x);*/
 
-    printf("blocks: %d\n", blocks);
-    print_linesarray(lines, lines_rows);
-    printf("Guard is at (y,x): %d,%d\n", g.y, g.x);
-    Direction dir = g.direction;
-    int result = canMove(lines, dir, g);
+
+    int result = canMove(lines, g);
     if (result == UNIQUE || result == BEEN_HERE) {
-      // Check if possible blocker can be placed 4 infini-loop
-      bool created = false;
-      switch (dir) {
-      case UP:
-        for (int i = 0; i < arr.length && created == false; i++) {
-          printf("Obstacle: y,x %d,%d\n", arr.obstacles[i].y,
-                 arr.obstacles[i].x);
-          printf("%d Checking if can add block %s\n", i, dirName[dir]);
-          // if there is an obstacle on the y axis (updown)
-          if (arr.obstacles[i].y == g.y && arr.obstacles[i].x > g.x) {
-            printf("\t YES Can add obstruction at UP at y,x %d,%d\n", g.y - 1,
-                   g.x);
-            created = true;
-            blocks++;
-          }
-        }
-        break;
-      case RIGHT:
-        // check down => x axis
-        for (int i = 0; i < arr.length && created == false; i++) {
-          printf("Obstacle: y,x %d,%d\n", arr.obstacles[i].y,
-                 arr.obstacles[i].x);
-          printf("%d Checking if can add block %s\n", i, dirName[dir]);
-          if (arr.obstacles[i].y > g.y && arr.obstacles[i].x == g.x) {
-            printf("\t YES Can add obstruction at RIGHT at y,x %d,%d\n", g.y,
-                   g.x + 1);
-            created = true;
-            blocks++;
-          }
-        }
-        break;
-      case DOWN:
-        for (int i = 0; i < arr.length && created == false; i++) {
-          printf("Obstacle: y,x %d,%d\n", arr.obstacles[i].y,
-                 arr.obstacles[i].x);
-          printf("%d Checking if can add block %s\n", i, dirName[dir]);
-          if (arr.obstacles[i].y == g.y && arr.obstacles[i].x < g.x) {
-            printf("\t YES Can add obstruction at DOWN at y,x %d,%d\n", g.y + 1,
-                   g.x);
-            created = true;
-            blocks++;
-          }
-        }
-        break;
-      case LEFT:
-        for (int i = 0; i < arr.length && created == false; i++) {
-          printf("Obstacle: y,x %d,%d\n", arr.obstacles[i].y,
-                 arr.obstacles[i].x);
-          printf("%d Checking if can add block %s\n", i, dirName[dir]);
-          if (arr.obstacles[i].y < g.y && arr.obstacles[i].x == g.x) {
-            printf("\t YES Can add obstruction at LEFT at y,x %d,%d\n", g.y,
-                   g.x - 1);
-            created = true;
-            blocks++;
-          }
-        }
-        break;
-      default:
-        printf("Invalid direction\n");
-        break;
+      /*printf("Moving guard %s.\n", dirName[g.direction]);*/
+      if (drawX) {
+        moveDrawX(lines, &g);
+      } else {
+        move(lines, &g);
       }
-      printf("Moving guard %s.\n", dirName[dir]);
-      move(lines, dir, &g);
     } else if (result == BLOCKED_BY_WALL) {
 
-      // store the location of the obstacle
-      turnRight(lines, &g);
-      result = canMove(lines, g.direction, g);
+      // check if guard has already been here
+      turnRight(&g);
+      for ( int i = 0; i < visited_idx; i++) {
+        if (visited.data[i].x == g.x && visited.data[i].y == g.y && visited_dir[i] == g.direction) {
+          freePointArray(&obstacles);
+          freePointArray(&visited);
+          return 1;
+        }
+      }
+      /*result = canMove(lines, *g);*/
       if (result == DUNNO) {
         printf("Error: Direction is DUNNO\n");
-        return 1;
       }
-      move(lines, g.direction, &g);
+      /*move(lines, g);*/
     } else {
-      goto end;
+      printf("Wuh woh!\n");
     }
-    // printf("Got direction %d\n", dir);
+  }
+  freePointArray(&obstacles);
+  freePointArray(&visited);
+  return 0;
+}
+
+int main(int argc, char *argv[]) {
+  clock_t start,end;
+  double cpu_time_used;
+  start = clock();
+  char *file_name = "input.txt";
+  size_t max_file_size = 500 * 500;
+  size_t max_rows = 1300;
+  size_t max_cols = 1300;
+  int lines_rows = 0;
+  char **lines =
+      file_to_arr(file_name, max_file_size, max_rows, max_cols, &lines_rows);
+
+  simulate(lines, true);
+
+  PointArray traversedPath = createPointArray(MAX_OBSTACLES);
+  /*print_linesarray(lines, strlen(lines[0]));*/
+  for (int i = 0; i < lines_rows; i++) {
+    for (int j = 0; lines[i][j]; j++) {
+      if (lines[i][j] == 'X') {
+        addPoint(&traversedPath, j, i);
+      }
+    }
   }
 
-end:
-  printf("Guard exits at %d,%d\n", g.y, g.x);
-  printf("Part2: %d\n", blocks);
+  /*for (size_t i = 0; i < traversedPath.length; i++) {*/
+  /*  printf("TraversedPath %zu: y,x %d,%d\n", i, traversedPath.data[i].y,*/
+  /*         traversedPath.data[i].x);*/
+  /*}*/
+
+  int part2 = 0;
+  for (int i = 0; i < traversedPath.length; i++) {
+    char **linez =
+        file_to_arr(file_name, max_file_size, max_rows, max_cols, &lines_rows);
+    linez[(traversedPath.data[i]).y][(traversedPath.data[i]).x] = '#';
+    /*printf("Lets go %d\n",i);*/
+    part2 += simulate(linez, false);
+  }
+
+  end = clock();
+  cpu_time_used = ((double)(end-start));
+  printf("Time taken: %f seconds\n", cpu_time_used);
+
+  /*printf("Guard exits at %d,%d\n", g.y, g.x);*/
+  printf("Part1: %zu\n", traversedPath.length);
+  printf("Part2: %d\n", part2);
 
   // Free allocated memory
   for (int i = 0; i < lines_rows; i++) {
     free(lines[i]);
   }
   free(lines);
-  freeObstacleArray(&arr);
 
   return EXIT_SUCCESS;
 }

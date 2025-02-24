@@ -1,5 +1,7 @@
+#include "util/array.h"
 #include "util/dbg.h"
 #include "util/io.h"
+#include "util/str.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,39 +39,13 @@ ObstacleArray createObstacleArray(size_t length) {
   return arr;
 }
 
-void addObstacle(ObstacleArray *arr, Guard g) {
+void addObstacle(ObstacleArray *arr, int x, int y) {
   if (arr->length < arr->capacity) {
-    switch (g.direction) {
-    case UP: {
-      Obstacle o = {g.x, (g.y) - 1};
-      arr->obstacles[arr->length] = o;
-      arr->length++;
-      break;
-    }
-    case RIGHT: {
-      Obstacle o = {(g.x) + 1, g.y};
-      arr->obstacles[arr->length] = o;
-      arr->length++;
-      break;
-    }
-    case DOWN: {
-      Obstacle o = {g.x, (g.y) + 1};
-      arr->obstacles[arr->length] = o;
-      arr->length++;
-      break;
-    }
-    case LEFT: {
-      Obstacle o = {(g.x) - 1, g.y};
-      arr->obstacles[arr->length] = o;
-      arr->length++;
-      break;
-    }
-    default:
-      printf("Invalid direction\n");
-      break;
-    }
+    Obstacle o = {x, y};
+    arr->obstacles[arr->length] = o;
+    arr->length++;
   } else {
-    printf("Error: Cannot exceed capacity of ObstacleArray\n");
+    printf("At capacity\n");
   }
 }
 
@@ -143,6 +119,8 @@ int canMove(char **lines, Direction direction, Guard g) {
   }
 }
 
+
+
 void move(char **lines, Direction direction, Guard *g) {
   switch (direction) {
   case UP:
@@ -192,14 +170,18 @@ void turnRight(char **lines, Guard *g) {
 bool checkBounds(char **lines, int lines_num, Guard g) {
   int total_lines = lines_num;
   int line_length = strlen(lines[0]);
-  printf("Guard is at y,x %d,%d within total_lines: %d line_length: %d\n",
-         g.y, g.x, total_lines, line_length);
+  printf("Guard is at y,x %d,%d within total_lines: %d line_length: %d\n", g.y,
+         g.x, total_lines, line_length);
   if (g.x < line_length - 1 && g.y < total_lines - 1) {
     if (g.x > 0 && g.y > 0) {
       return true;
     }
   }
   return false;
+}
+
+void simulate(char **lines, Guard *g) {
+
 }
 
 int main(int argc, char *argv[]) {
@@ -212,6 +194,7 @@ int main(int argc, char *argv[]) {
       file_to_arr(file_name, max_file_size, max_rows, max_cols, &lines_rows);
 
   Guard g;
+  ObstacleArray arr = createObstacleArray(MAX_OBSTACLES);
 
   // Find the blasted guard!
   for (int i = 0; i < lines_rows; i++) {
@@ -221,12 +204,17 @@ int main(int argc, char *argv[]) {
         g.x = j;
         setGuardDirection(lines, &g);
       }
+      if (lines[i][j] == '#') {
+        addObstacle(&arr, j, i);
+      }
     }
   }
 
-  printf("Found guard on line: %d col: %d\n", g.y, g.x);
+  for (int i = 0; i < arr.length; i++) {
+    printf("Obstacle %d: y,x %d,%d\n", i, arr.obstacles[i].y, arr.obstacles[i].x);
+  }
 
-  ObstacleArray arr = createObstacleArray(MAX_OBSTACLES);
+  printf("Found guard on line: %d col: %d\n", g.y, g.x);
 
   // Predict the guards movement
   int blocks = 0;
@@ -315,7 +303,6 @@ int main(int argc, char *argv[]) {
     } else if (result == BLOCKED_BY_WALL) {
 
       // store the location of the obstacle
-      addObstacle(&arr, g);
       turnRight(lines, &g);
       result = canMove(lines, g.direction, g);
       if (result == DUNNO) {
@@ -335,7 +322,6 @@ end:
 
   // Free allocated memory
   for (int i = 0; i < lines_rows; i++) {
-    /*printf("Freeing lines[%d]\n", i);*/
     free(lines[i]);
   }
   free(lines);

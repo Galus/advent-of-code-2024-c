@@ -269,8 +269,7 @@ int main(int argc, char *argv[]) {
     linez[(traversedPath.data[i]).y][(traversedPath.data[i]).x] = '#';
     /*printf("Lets go %d\n",i);*/
     if (simulate(linez, false) == 1) {
-      printf("Adding a wall at (%d,%d) will cause infinite loop\n",
-             traversedPath.data[i].x, traversedPath.data[i].y);
+      /*printf("Adding a wall at (%d,%d) will cause infinite loop\n", traversedPath.data[i].x, traversedPath.data[i].y);*/
       part2++;
     }
   }

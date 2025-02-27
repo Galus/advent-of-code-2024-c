@@ -10,7 +10,6 @@
 int main(int argc, char *argv[]) {
   int part2 = 0;
 
-  char *arr = calloc(MAX_X, sizeof(char));
   FILE *fp = fopen("input.txt", "r");
   int count_y = 0;
   int count_x = 0;
@@ -123,6 +122,10 @@ int main(int argc, char *argv[]) {
   }
 
   printf("part2: %d\n", part2);
+
+  for(int i = 0; i < 256; i++) {
+    free(antennas[i].data);
+  }
 
   return EXIT_SUCCESS;
 }

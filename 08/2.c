@@ -66,13 +66,6 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  printf("Antenna '.' points:\n");
-  printPointArray(antennas['.']);
-  printf("Antenna '0' points:\n");
-  printPointArray(antennas['0']);
-  printf("Antenna 'A' points:\n");
-  printPointArray(antennas['A']);
-
   // Now for each antenna type
   for (int i = 0; i < 256; i++) {
     // if more than 1 antenna

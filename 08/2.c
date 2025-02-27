@@ -7,16 +7,6 @@
 #define MAX_Y 1000
 #define MAX_X 1000
 
-typedef struct {
-  PointArray data;
-  char type;
-} AntennaArray;
-
-AntennaArray createAntennaArray(int capacity, char type) {
-  PointArray data = createPointArray(capacity);
-  return (AntennaArray){data, type};
-}
-
 int main(int argc, char *argv[]) {
   int part2 = 0;
 

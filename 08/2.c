@@ -2,49 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "util/point.h"
 
 #define MAX_Y 1000
 #define MAX_X 1000
-
-typedef struct {
-  int x;
-  int y;
-} Point;
-
-typedef struct {
-  Point *data;
-  int length;
-  int capacity;
-} PointArray;
-
-Point createPoint(int x, int y) { return (Point){x, y}; }
-
-PointArray createPointArray(int capacity) {
-  Point *data = calloc(capacity, sizeof(Point));
-  int length = 0;
-  return (PointArray){data, length, capacity};
-}
-
-void addPoint(PointArray *arr, int x, int y) {
-  if (arr->length < arr->capacity) {
-    arr->data[arr->length++] = (Point){x, y};
-  } else {
-    printf("PointArray is full.\n");
-  }
-}
-
-void printPointArray(PointArray arr) {
-  printf("PointArray (%d Points): ", arr.length);
-  for (int i = 0; i < arr.length; i++) {
-    printf("%d:(%d,%d)", i, arr.data[i].x, arr.data[i].y);
-    if (i < arr.length - 1) {
-      printf(",");
-    }
-    if (i == arr.length - 1) {
-      printf("\n");
-    }
-  }
-}
 
 typedef struct {
   PointArray data;
@@ -182,3 +143,4 @@ int main(int argc, char *argv[]) {
 
   return EXIT_SUCCESS;
 }
+

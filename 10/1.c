@@ -4,64 +4,79 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct {
-  Point point;
-  char last_char;
-} StackItem;
+int directions[4][2] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
 
-int traverse_internal(Grid *grid, Point point, char target,
-                      char last_point_char) {
-  if (!isInBounds(grid, point.y, point.x)) {
-    /*printf("Point is outside of the grid!\n");*/
+int traverse_internal(Grid *grid, Point start, char target) {
+  int stack_max_items = 10 * grid->rows * grid->cols;
+  size_t stack_size = stack_max_items * sizeof(Point);
+  Point *stack = malloc(stack_size);
+  if (stack == NULL)
+    return 0;
+
+  bool *visited = calloc(grid->rows * grid->cols, sizeof(bool));
+  if (visited == NULL) {
+    free(stack);
     return 0;
   }
-  char *current_char_ptr = getGridCharValue(grid, point.y, point.x, NULL);
-  if (current_char_ptr == NULL) {
-    /*printf("current char ptr is NULL\n");*/
-    return 0;
-  }
-  char current_char = *current_char_ptr;
-  if (last_point_char != '0') {
-    if (current_char - last_point_char != 1) {
-      /*printf("Too large of a step.\n");*/
-      return 0;
-    }
-    if (current_char == target) {
-      /*printf("Found target at (%d,%d)\n", point.x, point.y);*/
-      grid->data[point.y][point.x] = 'X'; // prevent seeing this spot again
-      return 1;
-    }
-  }
 
+  // populate first item on stack
+  int stack_top = 0;
+  stack[stack_top++] = start;
 
-  printf("at (%d,%d)\n", point.x, point.y);
-  printf("last: %c\n", last_point_char);
-  printf("curr: %c\n", current_char);
-  if (current_char - last_point_char > 1) {
-    printf("Too large of a step.\n");
-    return 0;
-  }
+  // look for targets
   int found_target = 0;
+  while (stack_top > 0) {
+    Point current_point = stack[--stack_top];
+    int curx = current_point.x;
+    int cury = current_point.y;
+    char cur = grid->data[cury][curx];
+    printf("Processing (%d,%d): %c\n", curx, cury, cur);
 
-  // go right
-  Point right = point;
-  right.x++;
-  found_target += traverse_internal(grid, right, target, current_char);
+    if (visited[cury * grid->cols + curx]) {
+      continue;
+    }
+    visited[cury * grid->cols + curx] = true;
 
-  // go down
-  Point down = point;
-  down.y++;
-  found_target += traverse_internal(grid, down, target, current_char);
+    if (cur == '9') {
+      found_target++;
+      continue;
+    }
 
-  // go left
-  Point left = point;
-  left.x--;
-  found_target += traverse_internal(grid, left, target, current_char);
+    for (int d = 0; d < DIRECTION_COUNT; d++) {
+      Point next = {curx + directions[d][0], cury + directions[d][1]};
 
-  // go up
-  Point up = point;
-  up.y--;
-  found_target += traverse_internal(grid, up, target, current_char);
+      if (!isInBounds(grid, next.y, next.x)) {
+        /*printf("Point is outside of the grid!\n");*/
+        continue;
+      }
+
+      char next_char = grid->data[next.y][next.x];
+      if (next_char != cur + 1) {
+        continue;
+      }
+      stack[stack_top++] = next;
+    }
+
+    if (stack_top >= stack_max_items) {
+      printf("stack overflow avoided.\n");
+      break;
+    }
+  }
+  free(stack);
+
+  for (int y = 0; y < grid->rows; y++) {
+    for (int x = 0; x < grid->cols; x++) {
+      if (x == 0) {
+        printf("\n");
+      }
+      if (visited[y * grid->cols + x]) {
+        printf("X");
+      } else {
+        printf(".");
+      }
+    }
+  }
+  printf("\n");
   return found_target;
 }
 
@@ -79,8 +94,8 @@ int traverse(Grid *grid, Point start, char target) {
     printf("Start point is out of bounds.\n");
     return 0;
   }
-  /*printf("current_char %c\n", *current_char_ptr);*/
-  int paths = traverse_internal(copiedGrid, start, target, '0');
+
+  int paths = traverse_internal(copiedGrid, start, target);
   printf("paths: %d\n", paths);
   freeGrid(copiedGrid);
   return paths;
@@ -111,7 +126,8 @@ int main(int argc, char *argv[]) {
   // for each trailhead
   for (int i = 0; i < trailheads.length; i++) {
     Point trailhead = trailheads.data[i];
-    printf("Traversing trailhead %d at (%d,%d)\n", i, trailhead.x, trailhead.y);
+    printf("\n\nTraversing trailhead %d at (%d,%d)\n", i, trailhead.x,
+           trailhead.y);
     part1 += traverse(grid, trailhead, '9');
     // traverse
   }

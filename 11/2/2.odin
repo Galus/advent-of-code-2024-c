@@ -78,10 +78,10 @@ main :: proc() {
 			stones = simulate_blink(stones)
 		}
 		sum := 0
-		for _, stone_count in stones {
+		for val, stone_count in stones {
+			//println(val, stone_count)
 			sum += stone_count
 		}
-		println("part1: ", sum)
+		println("part2: ", sum)
 	}
-
 }
